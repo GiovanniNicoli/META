@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training di Metafonologia</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            font-weight: bold;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .hidden {
+            display: none;
+        }
+        #feedback {
+            font-weight: bold;
+            margin-top: 15px;
+            text-align: center;
+        }
+        #timer {
+            font-size: 1.2em;
+            margin-left: 20px;
+            color: #333;
+            float: right;
+        }
+        #userInput {
+            width: 80%;
+            height: 50px;
+            font-size: 1.5em;
+            margin: 20px auto;
+            display: block;
+        }
+        #wordListContainer {
+            font-size: 2em;
+            text-align: center;
+            margin-top: 50px;
+        }
+        #writingTaskContainer {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="optionsContainer">
+    <h1>Training di Metafonologia</h1>
+    <h2>Seleziona le opzioni</h2>
+    
+    <form id="optionsForm">
+        <!-- Tipo di attività -->
+        <div class="input-group">
+            <label for="activityType">Tipo di Attività:</label>
+            <select id="activityType" required>
+                <option value="recupero-diretto">Recupero Diretto</option>
+                <option value="recupero-inverso">Recupero Inverso</option>
+                <option value="recupero-diretto-parole-contrario">Recupero Diretto con Parole al Contrario</option>
+                <option value="recupero-inverso-parole-contrario">Recupero Inverso con Parole al Contrario</option>
+                <option value="recupero-diretto-inversione-vocali">Recupero Diretto con Inversione delle Vocali</option>
+                <option value="recupero-inverso-inversione-vocali">Recupero Inverso con Inversione delle Vocali</option>
+            </select>
+        </div>
+
+        <!-- Modalità di presentazione -->
+        <div class="input-group">
+            <label for="presentationMode">Modalità di Presentazione:</label>
+            <select id="presentationMode" required>
+                <option value="scritta">Scritta</option>
+                <option value="uditiva">Uditiva</option>
+            </select>
+        </div>
+
+        <!-- Numero di parole per lista -->
+        <div class="input-group">
+            <label for="wordCount">Numero di Parole per Lista:</label>
+            <input type="number" id="wordCount" min="2" max="7" value="5" required>
+        </div>
+
+        <!-- Tipologia di parole per lista -->
+        <div class="input-group">
+            <label for="wordType">Tipologia di Parole per Lista:</label>
+            <select id="wordType" required>
+                <option value="bisillabi">Bisillabi</option>
+                <option value="trisillabi">Trisillabi</option>
+                <option value="quadrisillabi">Quadrisillabi</option>
+                <option value="pentasillabi">Pentasillabi</option>
+                <option value="mista">Mista</option>
+            </select>
+        </div>
+
+        <!-- Numero di ripetizioni delle liste -->
+        <div class="input-group">
+            <label for="listRepetitions">Numero di Ripetizioni delle Liste:</label>
+            <input type="number" id="listRepetitions" min="1" value="3" required>
+        </div>
+
+        <!-- Tempo di presentazione delle liste (solo per modalità scritta) -->
+        <div class="input-group">
+            <label for="presentationTime">Tempo di Presentazione delle Liste (ms):</label>
+            <input type="number" id="presentationTime" min="500" value="2000">
+        </div>
+
+        <!-- Tempo per riscrivere la sequenza -->
+        <div class="input-group">
+            <label for="writingTime">Tempo per Riscrivere la Sequenza (ms):</label>
+            <input type="number" id="writingTime" min="500" value="3000" required>
+        </div>
+
+        <button type="submit" class="btn">Avvia il Compito</button>
+    </form>
+</div>
+
+<!-- Seconda pagina nascosta (dove si svolge il compito) -->
+<div class="container hidden" id="taskPage">
+    <h2>Compito in corso...</h2>
+    <div id="wordListContainer" class="hidden"></div>
+    <div id="audioContainer" class="hidden"></div>
+    <div id="writingTaskContainer" class="hidden">
+        <label for="userInput">Riscrivi la sequenza:</label>
+        <div id="timer" class="hidden"></div>
+        <input type="text" id="userInput">
+        <div id="feedback" class="hidden"></div>
+        <button class="btn hidden" id="nextListBtn">Prossima Lista</button>
+    </div>
+    <button class="btn" id="backButton">Indietro</button>
+</div>
+
+<!-- Pagina riassuntiva nascosta -->
+<div class="container hidden" id="summaryPage">
+    <h2>Risultato finale</h2>
+    <p id="finalScore"></p>
+    <button class="btn" id="downloadButton">Scarica il Risultato</button>
+    <button class="btn" id="homeButton">Torna alla Home</button>
+</div>
+
+<script>
+    const wordLists = {
+        bisillabi: ['qualche','strada','strano','brutto','classe','freddo','fresco','fretta','fronte','frutto','grande','grosso','gruppo','pranzo','presso','presto','prezzo','pronto','sforzo','spalla','spesso','stampa','stanco','stanza','stella','stesso','trarre','tratto','triste','troppo','bravo','breve','crisi','croce','frase','grado','grave','greco','prato','prima','primo','prova','scala','scena','scopo','spesa','stare','stato','treno','centro','contro','dentro','destro','labbro','mentre','nostro','vostro','bagno','basso','bello','bocca','bosco','caldo','campo','carne','carta','certo','circa','collo','colpa','colpo','conto','corpo','corsa','corso','costa','dente','dolce','donna','fatto','fermo','ferro','festa','folla','fondo','forma','forse','forte','forza','gamba','gatto','gente','gesto','gusto','largo','latte','legge','letto','libro','lotta','lungo','madre','mamma','massa','mente','messa','metro','mezzo','molto','mondo','monte','morte','notte','nulla','padre','parte','passo','pazzo','pelle','pezzo','ponte','porre','porta','porto','posto','punta','punto','regno','resto','ricco','rosso','russo','sacro','segno','senso','senza','sogno','sonno','sopra','sotto','tanto','tardi','tempo','terzo','testa','tutto','valle','vasto','vento','verde','verso','villa','vista','volta','volto','zitto','base','bene','bere','cane','capo','caro','casa','caso','come','cosa','cura','dare','dire','dito','dopo','dove','duro','fame','fede','filo','fine','fino','giro','lago','lato','lira','loro','luce','luna','male','mano','mare','meno','mese','modo','muro','nave','nero','nome','noto','nudo','pace','pane','pena','peso','poco','pure','puro','riva','roba','sala','sede','sera','sino','sole','solo','tale','tipo','tono','vino','viso','vita','vivo','voce','zona','altro','anche','entro','oltre','ombra','alto','anno','anzi','arma','arte','atto','ecco','egli','erba','essa','esso','oggi','ogni','ora','oro','uno','uso','braccio','proprio','grazia','grazie','grigio','spazio','specie','storia','studio','scienza','sguardo','chiaro','chiave','chiesa','scuola','vecchio','bestia','calcio','dubbio','dunque','faccia','figlia','figlio','foglia','lingua','maggio','meglio','moglie','patria','peggio','sangue','voglia','medio','vario','bianco','biondo','dietro','fianco','giallo','giorno','giugno','giusto','guerra','niente','pianta','piazza','pietra','quadro','quanto','quarto','quello','questo','quindi','buono','causa','cielo','cuore','fiore','fiume','fuoco','fuori','gioco','luogo','nuovo','piano','piede','pieno','quale','quasi','vuoto','buio','occhio','acqua','ampio','aria','ieri','uomo','viaggio','gioia'
+],
+        trisillabi: ['scherzare','scrittore','stringere','strumento','scrivere','programma','crescere','francese','prendere','principe','problema','prossimo','scappare','scendere','scoprire','scorrere','smettere','spegnere','spingere','staccare','svolgere','trattare','fratello','presente','presenza','processo','prodotto','produrre','profondo','proporre','proposta','speranza','sviluppo','credere','gridare','preciso','pregare','privato','provare','scusare','sperare','spirito','sposare','stasera','storico','stupido','trovare','creare','confronto','congresso','controllo','ricchezza','centrale','comprare','fabbrica','macchina','mostrare','pubblico','sembrare','semplice','soffrire','bellezza','campagna','compagno','comporre','concetto','condurre','contatto','contento','corrente','discorso','disporre','distanza','montagna','perfetto','rapporto','rispetto','risposta','soltanto','successo','bambina','bambino','bastare','battere','buttare','cantare','cattivo','cercare','collina','colpire','contare','coprire','correre','cortile','cultura','davvero','destino','dormire','dottore','fermare','fissare','fondare','formare','fornire','fortuna','fuggire','gettare','leggere','leggero','lettera','lontano','mancare','mandare','massimo','mattina','mattino','mercato','mettere','nascere','nemmeno','neppure','nessuno','normale','padrone','parlare','partire','partito','passare','passato','peccato','pensare','perdere','perfino','persona','piccolo','portare','rendere','restare','rompere','saltare','salvare','segnare','segreto','sentire','servire','signora','signore','sistema','sognare','soldato','sorgere','sorriso','sottile','tecnico','tendere','tentare','termine','terreno','toccare','tornare','vendere','vestire','vestito','vincere','volgere','voltare','finestra','ministro','sinistro','bisogno','capello','cavallo','davanti','dinanzi','diretto','diritto','diverso','domanda','durante','governo','moderno','momento','palazzo','potenza','ragazza','ragazzo','recente','ricerca','ricordo','ridurre','ritorno','secondo','sorella','tedesco','badare','cadere','camera','capace','capire','civile','colore','coloro','comodo','comune','cucina','denaro','difesa','dolore','domani','dovere','durare','facile','famoso','fatica','favore','felice','ferire','figura','finire','fumare','futuro','genere','girare','godere','latino','lavoro','legare','levare','libero','limite','magari','marito','medico','merito','minimo','minore','minuto','misura','morale','morire','motivo','musica','natura','nemico','nobile','notare','numero','pagare','pagina','parere','parete','parola','pesare','popolo','posare','potere','povero','rapido','recare','ridere','romano','salire','sapere','secolo','sedere','sereno','sicuro','simile','solito','subito','tacere','tavola','tavolo','temere','tenere','tirare','titolo','valere','valore','vedere','venire','vicino','visita','vivere','volare','volere','linea','serie','serio','maestro','neanche','teatro','paese','paura','poeta','reale','entrare','estremo','inglese','offrire','accanto','accordo','addosso','affatto','albergo','appunto','aspetto','attento','attorno','azzurro','effetto','esporre','imporre','infatti','insomma','intanto','interno','intorno','inverno','istante','oggetto','opporre','affare','albero','alcuno','allora','almeno','alzare','ancora','andare','angolo','antico','appena','aprire','armare','attesa','attimo','attore','eppure','errore','essere','estate','estero','infine','intero','invece','ognuno','oppure','ordine','ultimo','uscire','assai','inoltre','adesso','avanti','enorme','abito','amare','amico','amore','anima','animo','avere','epoca','esame','isola','odore','onore','opera','udire','umano','unico','unire','usare','utile','idea','straniero','principio','tranquillo','cristiano','sbagliare','scegliere','scoppiare','svegliare','provincia','bruciare','speciale','stagione','stazione','studiare','chiamare','chiedere','chiudere','spiegare','contrario','costruire','battaglia','commercio','compagnia','consiglio','continuo','fantasia','servizio','tuttavia','coscienza','cambiare','compiere','funzione','lanciare','lasciare','maggiore','mangiare','mestiere','migliore','passione','pensiero','tagliare','togliere','parecchio','comunque','coraggio','famiglia','malattia','silenzio','fiducia','memoria','notizia','polizia','baciare','maniera','milione','nazione','ragione','regione','seguire','seguito','sociale','piuttosto','ciascuno','giardino','giornale','giornata','giungere','guardare','piangere','piantare','qualcosa','qualcuno','riuscire','guardia','giocare','giovane','guidare','muovere','piacere','pianura','riunire','suonare','poesia','ufficio','indietro','attuale','insieme','orecchio','energia','esempio','inizio','azione','uguale','autore','aiuto','giustizia','qualsiasi','questione','qualunque','giudizio'
+],
+        quadrisillabi: ['trasformare','principale','provvedere','scomparire','spettacolo','trascinare','presentare','professore','promettere','stamattina','chilometro','presidente','preferire','preparare','prevedere','procedere','proposito','provocare','stabilire','comprendere','costringere','distruggere','sorprendere','concludere','descrivere','pubblicare','soprattutto','confessare','consentire','conservare','convincere','diffondere','nascondere','permettere','raccontare','riprendere','rispondere','certamente','differenza','sentimento','camminare','cattolico','cittadino','concedere','contadino','contenere','difficile','discutere','mantenere','personale','possedere','possibile','ritrovare','settimana','signorina','sorridere','sostenere','succedere','dimostrare','repubblica','conoscenza','finalmente','bisognare','carattere','celebrare','conoscere','difendere','dipendere','direttore','diventare','divertire','domandare','resistere','ricordare','rimettere','riportare','risolvere','risultare','risultato','ritornare','rivolgere','movimento','sicurezza','veramente','capitare','decidere','dedicare','dirigere','divenire','dividere','domenica','fenomeno','figurare','generale','lavorare','liberare','limitare','medesimo','meritare','militare','naturale','notevole','numeroso','pericolo','politica','politico','ricevere','riferire','rimanere','ripetere','ritenere','rivedere','rivelare','salutare','superare','materia','periodo','rientrare','riempire','affrontare','improvviso','escludere','esprimere','incontrare','industria','abbastanza','accorgersi','eccellenza','importante','importanza','accendere','accettare','affermare','ammazzare','ammettere','arrestare','ascoltare','aspettare','assistere','attaccare','attendere','avvertire','estendere','importare','insegnare','insistere','intendere','occorrere','offendere','osservare','argomento','interesse','accadere','apparire','arrivare','articolo','assoluto','assumere','avvenire','avvocato','eccetera','immagine','imparare','impedire','indicare','invitare','istituto','ordinare','ospedale','ottenere','uccidere','ambiente','elettrico','avanzare','esercito','esistere','elemento','abitare','animale','elevare','evitare','inutile','origine','oramai','produzione','costruzione','ringraziare','commissione','distinguere','raccogliere','personaggio','matrimonio','sacrificio','segretario','territorio','conseguenza','condizione','continuare','raggiungere','dichiarare','richiedere','necessario','cominciare','pomeriggio','decisione','direzione','posizione','relazione','religioso','soluzione','riguardare','nazionale','rifiutare','giovanotto','giudicare','espressione','impressione','accogliere','annunciare','appoggiare','attenzione','intenzione','occasione','ufficiale','aggiungere','iniziare','italiano','opinione','operaio','aumentare','europeo','aiutare','situazione'
+],
+        pentasillabi: ['probabilmente','preoccupare','rappresentare','completamente','considerare','partecipare','particolare','significare','costituire','determinare','dimenticare','naturalmente','riconoscere','desiderare','pericoloso','desiderio','superiore','attraversare','industriale','accompagnare','abbandonare','allontanare','appartenere','impossibile','interessante','addirittura','interessare','organizzare','assicurare','avvicinare','immaginare','innamorare','esperienza','americano','economico','straordinario','disposizione','popolazione','rivoluzione','atteggiamento','operazione','automobile'
+],
+        mista: ['probabilmente','preoccupare','rappresentare','completamente','considerare','partecipare','particolare','significare','costituire','determinare','dimenticare','naturalmente','riconoscere','desiderare','pericoloso','desiderio','superiore','attraversare','industriale','accompagnare','abbandonare','allontanare','appartenere','impossibile','interessante','addirittura','interessare','organizzare','assicurare','avvicinare','scherzare','scrittore','stringere','strumento','scrivere','programma','crescere','francese','prendere','principe','problema','prossimo','scappare','scendere','scoprire','scorrere','smettere','spegnere','spingere','staccare','svolgere','trattare','fratello','presente','presenza','processo','prodotto','produrre','profondo','proporre','proposta','speranza','sviluppo','credere','gridare','preciso','pregare','privato','provare','scusare','sperare','spirito','sposare','stasera','storico','stupido','trovare','creare','confronto','congresso','controllo','ricchezza','centrale','comprare','fabbrica','macchina','mostrare','pubblico','sembrare','semplice','qualche','strada','strano','brutto','classe','freddo','fresco','fretta','fronte','frutto','grande','grosso','gruppo','pranzo','presso','presto','prezzo','pronto','sforzo','spalla','spesso','stampa','stanco','stanza','stella','stesso','trarre','tratto','triste','troppo','bravo','breve','crisi','croce','frase','grado','grave','greco','prato','prima','primo','prova','scala','scena','scopo','spesa','stare','stato','treno','centro','contro','dentro','destro','labbro','mentre','nostro','vostro','bagno','basso','bello','bocca','bosco','caldo','campo','carne','carta','certo','circa','collo','colpa','colpo','conto','corpo','corsa','corso','costa','dente','dolce','donna','fatto','fermo','ferro','festa','folla','fondo','forma','forse','forte','forza','gamba','gatto','gente','gesto','gusto','largo','latte','legge','letto','libro','lotta','lungo','madre','mamma','massa','mente','messa','metro','mezzo','molto','mondo','monte','morte','notte','nulla','padre','parte','passo','pazzo','pelle','pezzo','ponte','porre','porta','porto','posto','punta','punto','regno','resto','ricco','rosso','russo','sacro','segno','senso','senza','sogno','sonno','sopra','sotto','tanto','tardi','tempo','terzo','testa','tutto','valle','vasto','vento','verde','verso','villa','vista','volta','volto','zitto','base','bene','bere','cane','capo','caro','casa','caso','come','cosa','cura','dare','dire','dito','dopo','dove','duro','fame','fede','filo','fine','fino','giro','lago','lato','lira','loro','luce','luna','male','mano','mare','meno','mese','modo','muro','nave','nero','nome','noto','nudo','pace','pane','pena','peso','poco','pure','puro','riva','roba','sala','sede','sera','sino','sole','solo','tale','tipo','tono','vino','viso','vita','vivo','voce','zona','altro','anche','entro','oltre','ombra','alto','anno','anzi','arma','arte','atto','ecco','egli','erba','essa','esso','oggi','ogni','ora','oro','uno','uso','braccio','proprio','grazia','grazie','grigio','spazio','specie','storia','studio','scienza','sguardo','chiaro','chiave','chiesa','scuola','vecchio','bestia','calcio','dubbio','dunque','faccia','figlia','figlio','foglia','lingua','maggio','meglio','moglie','patria','peggio','sangue','voglia','medio','vario','bianco','biondo','dietro','fianco','giallo','giorno','giugno','giusto','guerra','niente','pianta','piazza','pietra','quadro','quanto','quarto','quello','questo','quindi','buono','causa','cielo','cuore','fiore','fiume','fuoco','fuori','gioco','luogo','nuovo','piano','piede','pieno','quale','quasi','vuoto','buio','occhio','acqua','ampio','aria','ieri','uomo','viaggio','gioia','soffrire','bellezza','campagna','compagno','comporre','concetto','condurre','contatto','contento','corrente','discorso','disporre','distanza','montagna','perfetto','rapporto','rispetto','risposta','soltanto','successo','bambina','bambino','bastare','battere','buttare','cantare','cattivo','cercare','collina','colpire','contare','coprire','correre','cortile','cultura','davvero','destino','dormire','dottore','fermare','fissare','fondare','formare','fornire','fortuna','fuggire','gettare','leggere','leggero','lettera','lontano','mancare','mandare','massimo','mattina','mattino','mercato','mettere','nascere','nemmeno','neppure','nessuno','normale','padrone','parlare','partire','partito','passare','passato','peccato','pensare','perdere','perfino','persona','piccolo','portare','rendere','restare','rompere','saltare','salvare','segnare','segreto','sentire','servire','signora','signore','sistema','sognare','soldato','sorgere','sorriso','sottile','tecnico','tendere','tentare','termine','terreno','toccare','tornare','vendere','vestire','vestito','vincere','volgere','voltare','finestra','ministro','sinistro','bisogno','capello','cavallo','davanti','dinanzi','diretto','diritto','diverso','domanda','durante','governo','moderno','momento','palazzo','potenza','ragazza','ragazzo','recente','ricerca','ricordo','ridurre','ritorno','secondo','sorella','tedesco','badare','cadere','camera','capace','capire','civile','colore','coloro','comodo','comune','cucina','denaro','difesa','dolore','domani','dovere','durare','facile','famoso','fatica','favore','felice','ferire','figura','finire','fumare','futuro','genere','girare','godere','latino','lavoro','legare','levare','libero','limite','magari','marito','medico','merito','minimo','minore','minuto','misura','morale','morire','motivo','musica','natura','nemico','nobile','notare','numero','pagare','pagina','parere','parete','parola','pesare','popolo','posare','potere','povero','rapido','recare','ridere','romano','salire','sapere','secolo','sedere','sereno','sicuro','simile','solito','subito','tacere','tavola','tavolo','temere','tenere','tirare','titolo','valere','valore','vedere','venire','vicino','visita','vivere','volare','volere','linea','serie','serio','maestro','neanche','teatro','paese','paura','poeta','reale','entrare','estremo','inglese','offrire','accanto','accordo','addosso','affatto','albergo','appunto','aspetto','attento','attorno','azzurro','effetto','esporre','imporre','infatti','insomma','intanto','interno','intorno','inverno','istante','oggetto','opporre','affare','albero','alcuno','allora','almeno','alzare','ancora','andare','angolo','antico','appena','aprire','armare','attesa','attimo','attore','eppure','errore','essere','estate','estero','infine','intero','invece','ognuno','oppure','ordine','ultimo','uscire','assai','inoltre','adesso','avanti','enorme','abito','amare','amico','amore','anima','animo','avere','epoca','esame','isola','odore','onore','opera','udire','umano','unico','unire','usare','utile','idea','straniero','principio','tranquillo','cristiano','sbagliare','scegliere','scoppiare','svegliare','provincia','bruciare','speciale','stagione','stazione','studiare','chiamare','chiedere','chiudere','spiegare','contrario','costruire','battaglia','commercio','compagnia','consiglio','continuo','fantasia','servizio','tuttavia','coscienza','cambiare','compiere','funzione','lanciare','lasciare','maggiore','mangiare','mestiere','migliore','passione','pensiero','tagliare','togliere','parecchio','comunque','coraggio','famiglia','malattia','silenzio','fiducia','memoria','notizia','polizia','baciare','maniera','milione','nazione','ragione','regione','seguire','seguito','sociale','piuttosto','ciascuno','giardino','giornale','giornata','giungere','guardare','piangere','piantare','qualcosa','qualcuno','riuscire','guardia','giocare','giovane','guidare','muovere','piacere','pianura','riunire','suonare','poesia','ufficio','indietro','attuale','insieme','orecchio','energia','esempio','inizio','azione','uguale','autore','aiuto','giustizia','qualsiasi','questione','qualunque','giudizio','immaginare','innamorare','esperienza','americano','economico','straordinario','disposizione','popolazione','rivoluzione','atteggiamento','operazione','automobile','trasformare','principale','provvedere','scomparire','spettacolo','trascinare','presentare','professore','promettere','stamattina','chilometro','presidente','preferire','preparare','prevedere','procedere','proposito','provocare','stabilire','comprendere','costringere','distruggere','sorprendere','concludere','descrivere','pubblicare','soprattutto','confessare','consentire','conservare','convincere','diffondere','nascondere','permettere','raccontare','riprendere','rispondere','certamente','differenza','sentimento','camminare','cattolico','cittadino','concedere','contadino','contenere','difficile','discutere','mantenere','personale','possedere','possibile','ritrovare','settimana','signorina','sorridere','sostenere','succedere','dimostrare','repubblica','conoscenza','finalmente','bisognare','carattere','celebrare','conoscere','difendere','dipendere','direttore','diventare','divertire','domandare','resistere','ricordare','rimettere','riportare','risolvere','risultare','risultato','ritornare','rivolgere','movimento','sicurezza','veramente','capitare','decidere','dedicare','dirigere','divenire','dividere','domenica','fenomeno','figurare','generale','lavorare','liberare','limitare','medesimo','meritare','militare','naturale','notevole','numeroso','pericolo','politica','politico','ricevere','riferire','rimanere','ripetere','ritenere','rivedere','rivelare','salutare','superare','materia','periodo','rientrare','riempire','affrontare','improvviso','escludere','esprimere','incontrare','industria','abbastanza','accorgersi','eccellenza','importante','importanza','accendere','accettare','affermare','ammazzare','ammettere','arrestare','ascoltare','aspettare','assistere','attaccare','attendere','avvertire','estendere','importare','insegnare','insistere','intendere','occorrere','offendere','osservare','argomento','interesse','accadere','apparire','arrivare','articolo','assoluto','assumere','avvenire','avvocato','eccetera','immagine','imparare','impedire','indicare','invitare','istituto','ordinare','ospedale','ottenere','uccidere','ambiente','elettrico','avanzare','esercito','esistere','elemento','abitare','animale','elevare','evitare','inutile','origine','oramai','produzione','costruzione','ringraziare','commissione','distinguere','raccogliere','personaggio','matrimonio','sacrificio','segretario','territorio','conseguenza','condizione','continuare','raggiungere','dichiarare','richiedere','necessario','cominciare','pomeriggio','decisione','direzione','posizione','relazione','religioso','soluzione','riguardare','nazionale','rifiutare','giovanotto','giudicare','espressione','impressione','accogliere','annunciare','appoggiare','attenzione','intenzione','occasione','ufficiale','aggiungere','iniziare','italiano','opinione','operaio','aumentare','europeo','aiutare','situazione']
+    };
+
+    document.getElementById('optionsForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        document.getElementById('taskPage').classList.remove('hidden');
+        document.getElementById('optionsContainer').classList.add('hidden');
+
+        const activityType = document.getElementById('activityType').value;
+        const presentationMode = document.getElementById('presentationMode').value;
+        const wordCount = parseInt(document.getElementById('wordCount').value);
+        const wordType = document.getElementById('wordType').value;
+        const listRepetitions = parseInt(document.getElementById('listRepetitions').value);
+        const presentationTime = parseInt(document.getElementById('presentationTime').value) || 2000;
+        const writingTime = parseInt(document.getElementById('writingTime').value) || 3000;
+        
+        let wordsList = [];
+        if (wordType === 'mista') {
+            wordsList = [].concat(
+                wordLists.bisillabi,
+                wordLists.trisillabi,
+                wordLists.quadrisillabi,
+                wordLists.pentasillabi
+            );
+        } else {
+            wordsList = wordLists[wordType];
+        }
+
+        let score = 0;
+        let totalTime = 0;
+        let currentListIndex = 0;
+        const results = [];
+
+        const presentNextList = () => {
+            if (currentListIndex < listRepetitions) {
+                const selectedWords = [];
+                for (let i = 0; i < wordCount; i++) {
+                    const randomIndex = Math.floor(Math.random() * wordsList.length);
+                    selectedWords.push(wordsList[randomIndex]);
+                }
+
+                const wordListContainer = document.getElementById('wordListContainer');
+                if (presentationMode === 'scritta') {
+                    wordListContainer.classList.remove('hidden');
+                    let wordIndex = 0;
+
+                    const showNextWord = () => {
+                        if (wordIndex < selectedWords.length) {
+                            wordListContainer.textContent = selectedWords[wordIndex].toUpperCase();
+                            wordListContainer.style.fontSize = '3em'; // Larger font
+                            wordListContainer.style.textAlign = 'center';
+                            wordIndex++;
+                            setTimeout(showNextWord, presentationTime);
+                        } else {
+                            wordListContainer.classList.add('hidden');
+                            startWritingTask(selectedWords);
+                        }
+                    };
+
+                    showNextWord();
+                } else if (presentationMode === 'uditiva') {
+                    const speakWords = (index) => {
+                        if (index < selectedWords.length) {
+                            const utterance = new SpeechSynthesisUtterance(selectedWords[index]);
+                            utterance.rate = 0.9; // Regola la velocità della sintesi vocale
+                            speechSynthesis.speak(utterance);
+                            utterance.onend = () => {
+                                setTimeout(() => {
+                                    speakWords(index + 1);
+                                }, 800); // Pausa di 800ms tra una parola e l'altra
+                            };
+                        } else {
+                            startWritingTask(selectedWords);
+                        }
+                    };
+                    speakWords(0);
+                }
+            } else {
+                showSummary();
+            }
+        };
+
+        const startWritingTask = (selectedWords) => {
+            const userInputField = document.getElementById('userInput');
+            const feedback = document.getElementById('feedback');
+            const nextListBtn = document.getElementById('nextListBtn');
+            const timerElement = document.getElementById('timer');
+
+            userInputField.value = '';
+            document.getElementById('writingTaskContainer').classList.remove('hidden');
+
+            let timeRemaining = writingTime / 1000;
+            timerElement.textContent = `Tempo rimanente: ${timeRemaining}s`;
+            timerElement.classList.remove('hidden');
+
+            const timer = setInterval(() => {
+                timeRemaining--;
+                timerElement.textContent = `Tempo rimanente: ${timeRemaining}s`;
+                if (timeRemaining <= 0) {
+                    clearInterval(timer);
+                    processUserInput(selectedWords, writingTime);
+                }
+            }, 1000);
+
+            userInputField.onkeydown = function(event) {
+                if (event.key === 'Enter') {
+                    clearInterval(timer);
+                    const timeUsed = (writingTime / 1000) - timeRemaining;
+                    processUserInput(selectedWords, timeUsed * 1000);
+                }
+            };
+        };
+
+        const processUserInput = (selectedWords, timeUsed) => {
+            const userInput = document.getElementById('userInput').value.trim().toUpperCase().split(' ');
+            const feedback = document.getElementById('feedback');
+            const nextListBtn = document.getElementById('nextListBtn');
+            let correctSequence;
+
+            switch (activityType) {
+                case 'recupero-diretto':
+                    correctSequence = selectedWords.map(word => word.toUpperCase());
+                    break;
+                case 'recupero-inverso':
+                    correctSequence = selectedWords.slice().reverse().map(word => word.toUpperCase());
+                    break;
+                case 'recupero-diretto-parole-contrario':
+                    correctSequence = selectedWords.map(word => word.split('').reverse().join('').toUpperCase());
+                    break;
+                case 'recupero-inverso-parole-contrario':
+                    correctSequence = selectedWords.slice().reverse().map(word => word.split('').reverse().join('').toUpperCase());
+                    break;
+                case 'recupero-diretto-inversione-vocali':
+                    correctSequence = selectedWords.map(word => {
+                        let vowels = word.match(/[aeiouàèéìòù]/gi);
+                        if (vowels && vowels.length >= 2) {
+                            let temp = vowels[0];
+                            vowels[0] = vowels[vowels.length - 1];
+                            vowels[vowels.length - 1] = temp;
+                            return word.replace(/[aeiouàèéìòù]/gi, _ => vowels.shift()).toUpperCase();
+                        }
+                        return word.toUpperCase();
+                    });
+                    break;
+                case 'recupero-inverso-inversione-vocali':
+                    correctSequence = selectedWords.slice().reverse().map(word => {
+                        let vowels = word.match(/[aeiouàèéìòù]/gi);
+                        if (vowels && vowels.length >= 2) {
+                            let temp = vowels[0];
+                            vowels[0] = vowels[vowels.length - 1];
+                            vowels[vowels.length - 1] = temp;
+                            return word.replace(/[aeiouàèéìòù]/gi, _ => vowels.shift()).toUpperCase();
+                        }
+                        return word.toUpperCase();
+                    });
+                    break;
+            }
+
+            let isCorrect = JSON.stringify(userInput) === JSON.stringify(correctSequence);
+            if (isCorrect) {
+                feedback.textContent = 'Corretto!';
+                feedback.style.color = 'green';
+                score++;
+                totalTime += timeUsed;
+            } else {
+                feedback.textContent = 'Sbagliato! La sequenza corretta era: ' + correctSequence.join(' ');
+                feedback.style.color = 'red';
+                totalTime += timeUsed;
+            }
+
+            // Salva i risultati
+            results.push({
+                inputString: selectedWords.join(' ').toUpperCase(),
+                userResponse: userInput.join(' '),
+                score: isCorrect ? 1 : 0,
+                timeUsed: timeUsed / 1000
+            });
+
+            feedback.classList.remove('hidden');
+            nextListBtn.classList.remove('hidden');
+
+            currentListIndex++;
+            document.getElementById('userInput').value = '';  // Azzerare la barra di scrittura
+        };
+
+        document.getElementById('nextListBtn').onclick = presentNextList;
+        document.getElementById('backButton').onclick = () => {
+            location.reload();
+        };
+
+        const showSummary = () => {
+            document.getElementById('taskPage').classList.add('hidden');
+            document.getElementById('summaryPage').classList.remove('hidden');
+
+            const maxScore = listRepetitions * writingTime;
+            const finalScore = Math.round((score / listRepetitions) * (1000 / (totalTime / score)) * 100);
+            document.getElementById('finalScore').textContent = `Punteggio finale: ${finalScore}`;
+        };
+
+        const downloadResults = () => {
+            let csvContent = "data:text/csv;charset=utf-8,Input String,User Response,Score,Time Used (s)\n";
+            results.forEach(result => {
+                csvContent += `${result.inputString},${result.userResponse},${result.score},${result.timeUsed}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "risultati_metafonologia.csv");
+            document.body.appendChild(link); // Required for FF
+            link.click();
+            document.body.removeChild(link); // Clean up
+        };
+
+        document.getElementById('downloadButton').onclick = downloadResults;
+        document.getElementById('homeButton').onclick = () => {
+            location.reload();
+        };
+
+        presentNextList();
+    });
+</script>
+
+</body>
+</html>
